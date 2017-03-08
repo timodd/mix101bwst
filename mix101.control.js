@@ -1,7 +1,7 @@
 loadAPI(2);
 
 // unstable behaviour of LEDs (Fedora25, BW2.0 Beta6) after saving the script
-//you have to restart the script or even un/replug the Mix-101 and detect the controller again to get it to work again
+//you have to restart the script or even un/replug the Mix-101 and detect the controller again to make the LEDs work again
 //avoid sending wrong MIDI msg could help
 
 host.defineController("DJ-Tech","MIX-101","1.0","82ae50a0-6741-11e2-bced-0800230c9a66","71modd");
@@ -38,6 +38,7 @@ var mode = [17,18,19,20];// 0=sampler, 1=loop, 2=fx, 3=cue/vinyl
 var led = [1,2,3,4,17,18,19,20,9,10,8,7];
 
 var isA = true;
+var isShift = 0;
 
 function init()
 {
@@ -126,11 +127,12 @@ function onMidi(status, data1, data2)
          i = enc.indexOf(data1);
          if (isA)
          {
-           deviceA2.getParameter(i).getAmount().inc(data2-64); /**TODO why only full on/off? **/
+           // rotaries send 63 on left, 65 on right turn
+           deviceA2.getParameter(i).getAmount().inc(data2-64,64); // 128 for full range
          }
          else
          {
-           deviceB2.getParameter(i).getAmount().inc(data2-64); /**TODO why only full on/off? **/
+           deviceB2.getParameter(i).getAmount().inc(data2-64,64); // 128 for full range
          }
       }
       if (data1 == cross)
@@ -148,6 +150,11 @@ function onMidi(status, data1, data2)
          // {
          // trackBank.scrollToChannel(6);
          // }
+      }
+      if (data1 == dial)
+      {
+        if (isShift)
+           data2 < 64 ? trackBank.scrollScenesUp() : trackBank.scrollScenesDown();
       }
    }
    if (isNoteOn(status))
@@ -169,7 +176,16 @@ function onMidi(status, data1, data2)
          deviceB1.getParameter(i).getAmount().reset();
       }
       if (data1 == play && data2)
-         transport.play();
+      {
+//         transport.play();
+         trackBank.launchScene(0);
+         trackBank.scrollScenesDown();
+      }
+      if (data1 == sync)
+      {
+         isShift = data2;
+      }
+
       if (data1 == ab && data2)
       {
          switchAB();
